@@ -8,6 +8,27 @@ if (!isset($_SESSION['cid'])) {
 }
 
 $cid = $_SESSION['cid'];
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $new_fname = $conn->real_escape_string($_POST['fname']);
+    $new_lname = $conn->real_escape_string($_POST[';name']);
+    $new_email = $conn->real_escape_string($_POST['email']);
+    $new_phone = $conn->real_escape_string($_POST['phone']);
+    $new_address = $conn->real_escape_string($_POST['address']);
+
+    $conn->query("UPDATE CUSTOMER SET Fname = '$new_fname',Lname = '$new_lname', Email = '$new_email', Phone = '$new_phone', Address = '$new_address' WHERE CID = $cid");
+
+    // Optional: handle password update
+    if (!empty($_POST['new_password'])) {
+        if ($_POST['new_password'] === $_POST['confirm_password']) {
+            $hashed = password_hash($_POST['new_password'], PASSWORD_DEFAULT);
+            $conn->query("UPDATE CUSTOMER SET Password = '$hashed' WHERE CID = $cid");
+        } else {
+            echo "<div class='alert alert-danger'>❌ Passwords do not match.</div>";
+        }
+    }
+
+    echo "<div class='alert alert-success'>✅ Profile updated successfully.</div>";
+}
 
 // Fetch customer info
 $customerQuery = $conn->query("SELECT * FROM CUSTOMER WHERE CID = $cid");
@@ -19,14 +40,28 @@ $totalPurchaseQuery = $conn->query("
     FROM APPEARS_IN AI
     JOIN BASKET B ON AI.BID = B.BID
     JOIN PRODUCT P ON AI.PID = P.PID
-    WHERE B.CID = $cid
+    JOIN TRANSACTION T ON B.BID = T.BID
+    WHERE B.CID = $cid AND T.TTag = 'Delivered'
 ");
 
 $totalPurchaseRow = $totalPurchaseQuery->fetch_assoc();
-$totalPurchase = $totalPurchaseRow['TotalPurchase'];
+$totalPurchase = (float)$totalPurchaseRow['TotalPurchase']; // ✅ Now this is always defined
 
-// Set customer status from CUSTOMER table directly
-$customerStatus = $customer['Status'];
+$new_status = 'Regular';
+if ($totalPurchase > 21000) {
+    $new_status = 'Platinum';
+} elseif ($totalPurchase > 14000) {
+    $new_status = 'Gold';
+} elseif ($totalPurchase > 7000) {
+    $new_status = 'Silver';
+}
+
+// ✅ Update customer status
+$conn->query("UPDATE CUSTOMER SET Status = '$new_status' WHERE CID = $cid");
+
+// ✅ Use for display
+$customerStatus = $new_status;
+
 
 // Handle profile update
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
@@ -89,6 +124,15 @@ $action = isset($_GET['action']) ? $_GET['action'] : '';
                             <button type="submit" name="update_profile" class="btn btn-success">Update Profile</button>
                             <a href="profile.php" class="btn btn-secondary">Cancel</a>
                         </div>
+                        <div class="col-md-6">
+                            <label class="form-label">New Password</label>
+                            <input type="password" name="new_password" class="form-control" placeholder="Leave blank to keep current">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Confirm New Password</label>
+                            <input type="password" name="confirm_password" class="form-control">
+                        </div>
+
                     </form>
 
                 <?php else : ?>

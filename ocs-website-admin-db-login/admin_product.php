@@ -101,8 +101,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['fetch_attributes']))
 
 
     // 🛠 First remove from all extra tables
-    $conn->query("DELETE FROM COMPUTER WHERE PID = $pid");
     $conn->query("DELETE FROM LAPTOP WHERE PID = $pid");
+    $conn->query("DELETE FROM COMPUTER WHERE PID = $pid");
     $conn->query("DELETE FROM PRINTER WHERE PID = $pid");
 
         if ($ptype == 'Computer') {

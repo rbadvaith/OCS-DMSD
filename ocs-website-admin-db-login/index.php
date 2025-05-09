@@ -8,6 +8,40 @@
 <body class="container mt-5">
   <h2 class="mb-4">Online Computer Store</h2>
 
+  <?php
+if (isset($_SESSION['cid'])) {
+    require_once 'db.php';
+    $cid = $_SESSION['cid'];
+
+    // Fetch total purchase only for Delivered orders
+    $totalPurchaseQuery = $conn->query("
+        SELECT COALESCE(SUM(P.PPrice * AI.Quantity), 0) AS TotalPurchase
+        FROM APPEARS_IN AI
+        JOIN BASKET B ON AI.BID = B.BID
+        JOIN PRODUCT P ON AI.PID = P.PID
+        JOIN TRANSACTION T ON B.BID = T.BID
+        WHERE B.CID = $cid AND T.TTag = 'Delivered'
+    ");
+
+    $totalPurchaseRow = $totalPurchaseQuery->fetch_assoc();
+    $totalPurchase = (float)$totalPurchaseRow['TotalPurchase'];
+
+    // Determine new status
+    $new_status = 'Regular';
+    if ($totalPurchase > 21000) {
+        $new_status = 'Platinum';
+    } elseif ($totalPurchase > 14000) {
+        $new_status = 'Gold';
+    } elseif ($totalPurchase > 7000) {
+        $new_status = 'Silver';
+    }
+
+    // Update CUSTOMER status in DB
+    $conn->query("UPDATE CUSTOMER SET Status = '$new_status' WHERE CID = $cid");
+}
+?>
+
+
   <?php if (isset($_SESSION['cid'])): ?>
     <p class="alert alert-success">Welcome, Customer #<?php echo $_SESSION['cid']; ?>!</p>
   <?php else: ?>

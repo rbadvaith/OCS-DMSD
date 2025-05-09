@@ -11,7 +11,16 @@ if (!isset($_SESSION['admin'])) {
 // ✅ Cancel Order if admin clicked "Cancel" and confirmed
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cancel_order_bid'])) {
     $bidToCancel = intval($_POST['cancel_order_bid']);
+// ✅ Restore quantities before cancelling
+    $restoreQuery = $conn->query("SELECT PID, Quantity FROM APPEARS_IN WHERE BID = $bidToCancel");
+    while ($item = $restoreQuery->fetch_assoc()) {
+        $pid = $item['PID'];
+        $qty = $item['Quantity'];
+        $conn->query("UPDATE PRODUCT SET PQuantity = PQuantity + $qty WHERE PID = $pid");
+    }
+    // ✅ Now cancel the order
     $conn->query("UPDATE TRANSACTION SET TTag = 'Cancelled' WHERE BID = $bidToCancel AND (TTag = 'In-Progress' OR TTag = 'Not-Delivered')");
+
     header("Location: view_orders.php");
     exit;
 }
